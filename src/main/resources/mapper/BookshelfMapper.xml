@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.novelbackend.mapper.BookshelfMapper">
+
+    <resultMap id="BookshelfResultMap" type="com.example.novelbackend.entity.Bookshelf">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="novelId" column="novel_id"/>
+        <result property="lastReadChapterNum" column="last_read_chapter_num"/>
+        <result property="lastReadTime" column="last_read_time"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <!-- 添加书架 -->
+    <insert id="insert" parameterType="com.example.novelbackend.entity.Bookshelf" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO bookshelf (user_id, novel_id, last_read_chapter_num, last_read_time, create_time)
+        VALUES (#{userId}, #{novelId}, #{lastReadChapterNum}, #{lastReadTime}, #{createTime})
+    </insert>
+
+    <!-- 根据用户ID和小说ID查询 -->
+    <select id="findByUserIdAndNovelId" resultMap="BookshelfResultMap">
+        SELECT * FROM bookshelf WHERE user_id = #{userId} AND novel_id = #{novelId}
+    </select>
+
+    <!-- 获取用户书架列表（包含小说信息） -->
+    <select id="findUserBookshelfWithNovelInfo" resultType="map">
+        SELECT
+            b.id as bookshelfId,
+            b.last_read_chapter_num as lastReadChapterNum,
+            b.last_read_time as lastReadTime,
+            b.create_time as addTime,
+            n.id as novelId,
+            n.title as novelTitle,
+            n.author as author,
+            n.cover as cover,
+            n.intro as intro,
+            n.status as status,
+            n.view_count as viewCount,
+            (SELECT COUNT(*) FROM chapter WHERE novel_id = n.id) as totalChapters,
+            (SELECT title FROM chapter WHERE novel_id = n.id ORDER BY chapter_num DESC LIMIT 1) as lastChapterTitle
+        FROM bookshelf b
+            INNER JOIN novel n ON b.novel_id = n.id
+        WHERE b.user_id = #{userId}
+        ORDER BY b.last_read_time DESC, b.create_time DESC
+    </select>
+
+    <!-- 更新最后阅读章节 -->
+    <update id="updateLastReadChapter">
+        UPDATE bookshelf
+        SET last_read_chapter_num = #{lastReadChapterNum},
+            last_read_time = #{lastReadTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除书架记录 -->
+    <delete id="deleteByUserIdAndNovelId">
+        DELETE FROM bookshelf WHERE user_id = #{userId} AND novel_id = #{novelId}
+    </delete>
+
+    <!-- 检查是否在书架中 -->
+    <select id="countByUserIdAndNovelId" resultType="int">
+        SELECT COUNT(*) FROM bookshelf WHERE user_id = #{userId} AND novel_id = #{novelId}
+    </select>
+
+</mapper>

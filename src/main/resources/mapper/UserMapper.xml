@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.novelbackend.mapper.UserMapper">
+
+    <!-- 根据用户名查询用户 -->
+    <select id="findByUsername" parameterType="string" resultType="com.example.novelbackend.entity.User">
+        SELECT * FROM user WHERE username = #{username}
+    </select>
+
+    <!-- 新增用户 -->
+    <insert id="insert" parameterType="com.example.novelbackend.entity.User">
+        INSERT INTO user (username, password, create_time)
+        VALUES (#{username}, #{password}, #{createTime})
+    </insert>
+
+    <!-- 新增：根据ID查用户 -->
+    <select id="findById" parameterType="Integer" resultType="com.example.novelbackend.entity.User">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+
+    <!-- 新增：修改密码 -->
+    <update id="updatePassword">
+        UPDATE user SET password = #{newPassword} WHERE id = #{id}
+    </update>
+
+    <!-- 新增：修改头像 -->
+    <update id="updateAvatar">
+        UPDATE user SET avatar = #{avatar} WHERE id = #{id}
+    </update>
+
+    <!-- 修改用户名 -->
+    <update id="updateUsername">
+        UPDATE user
+        SET username = #{newUsername}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

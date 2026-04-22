@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.novelbackend.mapper.NovelMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="NovelMap" type="com.example.novelbackend.entity.Novel">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="author" property="author"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="cover" property="cover"/>
+        <result column="intro" property="intro"/>
+        <result column="status" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="collect_count" property="collectCount"/>
+        <result column="is_recommend" property="isRecommend"/>
+        <result column="is_hot" property="isHot"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <!-- 获取所有小说 -->
+    <select id="findAll" resultMap="NovelMap">
+        SELECT * FROM novel ORDER BY id
+    </select>
+
+    <!-- 根据ID获取小说详情 -->
+    <select id="findById" resultMap="NovelMap">
+        SELECT * FROM novel WHERE id = #{id}
+    </select>
+
+    <!-- 获取热门推荐小说 -->
+    <select id="findHotNovels" resultMap="NovelMap">
+        SELECT * FROM novel
+        WHERE is_hot = 1
+        ORDER BY view_count DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 获取推荐小说 -->
+    <select id="findRecommendNovels" resultMap="NovelMap">
+        SELECT * FROM novel
+        WHERE is_recommend = 1
+        ORDER BY view_count DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 获取排行榜 -->
+    <select id="findRankByView" resultMap="NovelMap">
+        SELECT * FROM novel
+        ORDER BY view_count DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 按分类获取小说 -->
+    <select id="findByCategory" resultMap="NovelMap">
+        SELECT * FROM novel
+        WHERE category_id = #{categoryId}
+        ORDER BY view_count DESC
+    </select>
+
+    <!-- 增加点击量 -->
+    <update id="incrementViewCount">
+        UPDATE novel SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 搜索小说 -->
+    <select id="search" resultMap="NovelMap">
+        SELECT * FROM novel
+        WHERE title LIKE CONCAT('%', #{keyword}, '%')
+           OR author LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY view_count DESC
+    </select>
+
+    <!-- 获取小说总章节数 -->
+    <select id="getChapterCount" resultType="int">
+        SELECT COUNT(*) FROM chapter WHERE novel_id = #{novelId}
+    </select>
+
+    <!-- 获取最新章节标题 -->
+    <select id="getLastChapterTitle" resultType="string">
+        SELECT title FROM chapter
+        WHERE novel_id = #{novelId}
+        ORDER BY chapter_num DESC
+            LIMIT 1
+    </select>
+
+</mapper>
