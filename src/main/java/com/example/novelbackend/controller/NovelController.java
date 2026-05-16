@@ -5,7 +5,9 @@ import com.example.novelbackend.entity.Novel;
 import com.example.novelbackend.mapper.ChapterMapper;
 import com.example.novelbackend.service.BookshelfService;
 import com.example.novelbackend.service.NovelService;
+import com.example.novelbackend.service.RecommendationService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 import jakarta.annotation.Resource;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +24,10 @@ public class NovelController {
     private ChapterMapper chapterMapper;
     @Resource
     private BookshelfService bookshelfService;
+
+    @Resource
+    @Lazy
+    private RecommendationService recommendationService;
 
     // 获取所有小说（书城用）
     @GetMapping("/list")
@@ -217,6 +223,19 @@ public class NovelController {
         // 如果用户已登录，更新阅读进度
         if (userId != null) {
             bookshelfService.updateReadProgress(userId, novelId, chapterNum);
+            // 👇 添加日志
+            System.out.println("===== 准备记录阅读行为 =====");
+            System.out.println("userId: " + userId);
+            System.out.println("novelId: " + novelId);
+            System.out.println("behaviorType: read_chapter");
+
+            // 记录阅读行为
+            try {
+                recommendationService.recordUserBehavior(userId, novelId, "read_chapter");
+                System.out.println("===== 记录阅读行为成功 =====");
+            } catch (Exception e) {
+                System.err.println("记录阅读行为失败: " + e.getMessage());
+            }
         }
 
         result.put("code", 200);

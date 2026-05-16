@@ -4,6 +4,7 @@ import com.example.novelbackend.entity.Comment;
 import com.example.novelbackend.mapper.CommentLikeMapper;
 import com.example.novelbackend.mapper.CommentMapper;
 import com.example.novelbackend.service.CommentService;
+import com.example.novelbackend.service.RecommendationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.Resource;
@@ -19,6 +20,9 @@ public class CommentServiceImpl implements CommentService {
 
     @Resource
     private CommentLikeMapper commentLikeMapper;
+
+    @Resource
+    private RecommendationService recommendationService;
 
     @Override
     public Map<String, Object> getChapterComments(Long novelId, Integer chapterNum, Integer userId) {
@@ -79,6 +83,9 @@ public class CommentServiceImpl implements CommentService {
             result.put("code", 200);
             result.put("msg", "评论成功");
             result.put("data", newComment);
+
+            //记录行为
+            recommendationService.recordUserBehavior(userId, novelId, "comment");
         } else {
             result.put("code", 500);
             result.put("msg", "评论失败");

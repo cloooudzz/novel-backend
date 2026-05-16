@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.novelbackend.mapper.RecommendationMapper">
+
+    <!-- 获取小说标签 -->
+    <select id="getNovelTags" resultType="com.example.novelbackend.entity.NovelTag">
+        SELECT * FROM novel_tag WHERE novel_id = #{novelId}
+    </select>
+
+    <!-- 批量获取小说标签 -->
+    <select id="getNovelsTags" resultType="com.example.novelbackend.entity.NovelTag">
+        SELECT * FROM novel_tag
+        WHERE novel_id IN
+        <foreach collection="novelIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 获取用户标签偏好 -->
+    <select id="getUserTagPreferences" resultType="com.example.novelbackend.entity.UserTagPreference">
+        SELECT * FROM user_tag_preference WHERE user_id = #{userId}
+        ORDER BY score DESC
+    </select>
+
+    <!-- 更新用户标签偏好 -->
+    <insert id="upsertUserTagPreference">
+        INSERT INTO user_tag_preference (user_id, tag_name, score, updated_at)
+        VALUES (#{userId}, #{tagName}, #{score}, NOW())
+            ON DUPLICATE KEY UPDATE
+                                 score = score + #{score},
+                                 updated_at = NOW()
+    </insert>
+
+    <!-- 记录用户行为 -->
+    <insert id="insertBehaviorLog">
+        INSERT INTO user_behavior_log (user_id, novel_id, behavior_type, weight, created_at)
+        VALUES (#{userId}, #{novelId}, #{behaviorType}, #{weight}, NOW())
+    </insert>
+
+    <!-- 获取用户最近阅读小说的标签 -->
+    <select id="getUserRecentNovelTags" resultType="string">
+        SELECT DISTINCT nt.tag_name
+        FROM user_behavior_log ubl
+                 JOIN novel_tag nt ON ubl.novel_id = nt.novel_id
+        WHERE ubl.user_id = #{userId}
+        ORDER BY ubl.created_at DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 基于标签匹配推荐小说 -->
+    <select id="recommendByTags" resultType="com.example.novelbackend.entity.Novel">
+        SELECT DISTINCT n.*, COUNT(DISTINCT nt.tag_name) as match_count
+        FROM novel n
+        JOIN novel_tag nt ON n.id = nt.novel_id
+        WHERE 1=1
+        <if test="tags != null and tags.size() > 0">
+            AND nt.tag_name IN
+            <foreach collection="tags" item="tag" open="(" separator="," close=")">
+                #{tag}
+            </foreach>
+        </if>
+        <if test="userId != null">
+            AND n.id NOT IN (
+            SELECT novel_id FROM bookshelf WHERE user_id = #{userId}
+            UNION
+            SELECT novel_id FROM user_behavior_log WHERE user_id = #{userId}
+            )
+        </if>
+        GROUP BY n.id
+        ORDER BY (COUNT(DISTINCT nt.tag_name) * RAND()) DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 获取热门标签 -->
+    <select id="getHotTags" resultType="map">
+        SELECT tag_name, COUNT(*) as count
+        FROM novel_tag
+        GROUP BY tag_name
+        ORDER BY count DESC
+            LIMIT #{limit}
+    </select>
+
+    <!-- 获取所有标签 -->
+    <select id="getAllTags" resultType="string">
+        SELECT DISTINCT tag_name FROM novel_tag ORDER BY tag_name
+    </select>
+
+    <!-- 按类型分组获取标签 -->
+    <select id="getTagsByCategory" resultType="map">
+        SELECT tag_category, tag_name
+        FROM novel_tag
+        GROUP BY tag_name, tag_category
+        ORDER BY tag_category, tag_name
+    </select>
+
+</mapper>

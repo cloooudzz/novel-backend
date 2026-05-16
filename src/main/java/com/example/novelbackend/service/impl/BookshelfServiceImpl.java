@@ -4,6 +4,7 @@ import com.example.novelbackend.entity.Bookshelf;
 import com.example.novelbackend.mapper.BookshelfMapper;
 import com.example.novelbackend.mapper.ChapterMapper;
 import com.example.novelbackend.service.BookshelfService;
+import com.example.novelbackend.service.RecommendationService;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
@@ -18,7 +19,11 @@ public class BookshelfServiceImpl implements BookshelfService {
     private BookshelfMapper bookshelfMapper;
 
     @Resource
+    private RecommendationService recommendationService;
+
+    @Resource
     private ChapterMapper chapterMapper;
+
 
     @Override
     public Map<String, Object> addToBookshelf(Integer userId, Long novelId) {
@@ -42,6 +47,8 @@ public class BookshelfServiceImpl implements BookshelfService {
         if (rows > 0) {
             result.put("success", true);
             result.put("msg", "已加入书架");
+            //记录行为
+            recommendationService.recordUserBehavior(userId, novelId, "add_to_shelf");
         } else {
             result.put("success", false);
             result.put("msg", "加入书架失败");
