@@ -4,6 +4,7 @@ import com.example.novelbackend.entity.Chapter;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 import java.util.List;
 
 @Mapper
@@ -34,4 +35,12 @@ public interface ChapterMapper {
 
     @Delete("DELETE FROM chapter WHERE novel_id = #{novelId}")
     int deleteByNovelId(@Param("novelId") Long novelId);
+
+    // 更新章节
+    @Update("UPDATE chapter SET title = #{title}, content = #{content}, word_count = #{wordCount} WHERE id = #{id}")
+    int update(Chapter chapter);
+
+    // 根据ID删除章节
+    @Delete("DELETE FROM chapter WHERE id = #{id}")
+    int deleteById(@Param("id") Long id);
 }

@@ -1,38 +1,50 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.novelbackend.mapper.UserMapper">
 
+    <resultMap id="BaseResultMap" type="com.example.novelbackend.entity.User">
+        <id column="id" property="id"/>
+        <result column="account" property="account"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="avatar" property="avatar"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <!-- 根据账号查询用户 -->
+    <select id="findByAccount" resultMap="BaseResultMap">
+        SELECT * FROM user WHERE account = #{account}
+    </select>
+
     <!-- 根据用户名查询用户 -->
-    <select id="findByUsername" parameterType="string" resultType="com.example.novelbackend.entity.User">
+    <select id="findByUsername" resultMap="BaseResultMap">
         SELECT * FROM user WHERE username = #{username}
     </select>
 
-    <!-- 新增用户 -->
-    <insert id="insert" parameterType="com.example.novelbackend.entity.User">
-        INSERT INTO user (username, password, create_time)
-        VALUES (#{username}, #{password}, #{createTime})
-    </insert>
-
-    <!-- 新增：根据ID查用户 -->
-    <select id="findById" parameterType="Integer" resultType="com.example.novelbackend.entity.User">
+    <!-- 根据ID查询用户 -->
+    <select id="findById" resultMap="BaseResultMap">
         SELECT * FROM user WHERE id = #{id}
     </select>
 
-    <!-- 新增：修改密码 -->
+    <!-- 插入用户 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (account, username, password, avatar, create_time)
+        VALUES (#{account}, #{username}, #{password}, #{avatar}, #{createTime})
+    </insert>
+
+    <!-- 修改密码 -->
     <update id="updatePassword">
         UPDATE user SET password = #{newPassword} WHERE id = #{id}
     </update>
 
-    <!-- 新增：修改头像 -->
+    <!-- 修改头像 -->
     <update id="updateAvatar">
         UPDATE user SET avatar = #{avatar} WHERE id = #{id}
     </update>
 
     <!-- 修改用户名 -->
     <update id="updateUsername">
-        UPDATE user
-        SET username = #{newUsername}
-        WHERE id = #{id}
+        UPDATE user SET username = #{newUsername} WHERE id = #{id}
     </update>
 
 </mapper>

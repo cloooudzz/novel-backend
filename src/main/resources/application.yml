@@ -14,6 +14,11 @@ spring:
       allowed-origins: "*"
       allowed-methods: "*"
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   configuration:
@@ -23,5 +28,16 @@ mybatis:
 logging:
   level:
     root: WARN
-    com.example.novelbackend: INFO  # 只保留你自己代码的 INFO 日志
+    com.example.novelbackend: INFO
 
+avatar:
+  upload:
+    path: uploads/avatars/
+  access:
+    prefix: /avatars/
+
+cover:
+  upload:
+    path: uploads/covers/
+  access:
+    prefix: /covers/
