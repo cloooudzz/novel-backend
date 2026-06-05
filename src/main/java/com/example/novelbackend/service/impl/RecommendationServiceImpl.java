@@ -132,7 +132,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         Map<String, BigDecimal> tagScores = new HashMap<>();
 
         for (Map<String, Object> book : userBooks) {
-            // 👇 修复：安全地获取 novelId，支持 Integer 和 Long
+            // 安全地获取 novelId，支持 Integer 和 Long
             Object novelIdObj = book.get("novelId");
             Long novelId = null;
             if (novelIdObj instanceof Integer) {
@@ -180,7 +180,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             List<Map<String, Object>> shelfBooks = bookshelfMapper.findUserBookshelfWithNovelInfo(userId);
             for (var book : shelfBooks) {
                 Map<String, Object> item = new HashMap<>();
-                // 👇 修复：安全获取 novelId
+                // 获取 novelId
                 Object novelIdObj = book.get("novelId");
                 if (novelIdObj != null) {
                     item.put("novelId", novelIdObj);

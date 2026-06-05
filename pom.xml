@@ -98,6 +98,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Spring Security -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
 		<!-- 工具类（简化开发） -->
 		<dependency>
 			<groupId>cn.hutool</groupId>

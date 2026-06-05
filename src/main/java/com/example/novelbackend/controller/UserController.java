@@ -2,9 +2,13 @@ package com.example.novelbackend.controller;
 
 import com.example.novelbackend.entity.User;
 import com.example.novelbackend.mapper.UserMapper;
+import com.example.novelbackend.service.CaptchaService;
 import com.example.novelbackend.service.UserService;
+import com.example.novelbackend.utils.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.annotation.Resource;
@@ -23,11 +27,25 @@ public class UserController {
     private UserService userService;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
-    // 注册接口（使用账号+用户名+密码）
+    @Value("${avatar.upload.path}")
+    private String uploadPath;
+
+    @Value("${avatar.access.prefix}")
+    private String accessPrefix;
+
+    private Integer getUserIdFromRequest(HttpServletRequest request) {
+        return (Integer) request.getAttribute("userId");
+    }
+
+    // 注册接口
     @PostMapping("/register")
     public Map<String, Object> register(@RequestBody Map<String, String> params) {
-        System.out.println("收到注册请求 - 账号: " + params.get("account") + ", 用户名: " + params.get("username"));
+        System.out.println("收到注册请求 - 账号: " + params.get("account"));
         Map<String, Object> result = new HashMap<>();
 
         String account = params.get("account");
@@ -39,13 +57,17 @@ public class UserController {
             result.put("code", 200);
             result.put("msg", "注册成功");
         } else {
-            result.put("code", 500);
+            result.put("code", 400);
             result.put("msg", msg);
         }
         return result;
     }
 
-    // 登录接口（使用账号+密码）
+    // 登录接口 - 返回token
+    @Autowired
+    private CaptchaService captchaService;
+
+    // 登录接口
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody Map<String, String> params) {
         System.out.println("收到登录请求 - 账号: " + params.get("account"));
@@ -53,46 +75,89 @@ public class UserController {
 
         String account = params.get("account");
         String password = params.get("password");
+        String captchaKey = params.get("captchaKey");
+        String captchaCode = params.get("captchaCode");
 
-        String msg = userService.login(account, password);
-        if ("success".equals(msg)) {
-            User loggedUser = userMapper.findByAccount(account);
-            result.put("code", 200);
-            result.put("msg", "登录成功");
-            result.put("userId", loggedUser.getId());
-            result.put("username", loggedUser.getUsername());
-            result.put("account", loggedUser.getAccount());
-        } else {
-            result.put("code", 500);
-            result.put("msg", msg);
+        // 验证验证码
+        if (captchaKey == null || captchaCode == null) {
+            result.put("code", 400);
+            result.put("msg", "请输入验证码");
+            return result;
         }
+
+        boolean captchaValid = captchaService.validateCaptcha(captchaKey, captchaCode);
+        if (!captchaValid) {
+            result.put("code", 400);
+            result.put("msg", "验证码错误或已过期");
+            return result;
+        }
+
+        User user = userMapper.findByAccount(account);
+        if (user == null) {
+            result.put("code", 401);
+            result.put("msg", "账号不存在");
+            return result;
+        }
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            result.put("code", 401);
+            result.put("msg", "密码错误");
+            return result;
+        }
+
+        // 生成JWT token
+        String token = jwtUtil.generateToken(
+                user.getId().intValue(),
+                user.getAccount(),
+                user.getUsername()
+        );
+
+        result.put("code", 200);
+        result.put("msg", "登录成功");
+        result.put("token", token);
+        result.put("userId", user.getId());
+        result.put("username", user.getUsername());
+        result.put("account", user.getAccount());
+        result.put("avatar", user.getAvatar());
+
         return result;
     }
 
-    @Value("${avatar.upload.path}")
-    private String uploadPath;
-
-    @Value("${avatar.access.prefix}")
-    private String accessPrefix;
-
+    // 修改密码
     @PostMapping("/update-password")
     public Map<String, Object> changePassword(
-            @RequestParam Integer userId,
+            HttpServletRequest request,
             @RequestParam String oldPassword,
             @RequestParam String newPassword) {
-        System.out.println("收到修改密码请求 - userId: " + userId);
+        System.out.println("收到修改密码请求");
         Map<String, Object> result = new HashMap<>();
+        Integer userId = getUserIdFromRequest(request);
+
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
+
         String msg = userService.changePassword(userId, oldPassword, newPassword);
         result.put("code", msg.equals("密码修改成功") ? 200 : 400);
         result.put("msg", msg);
         return result;
     }
 
+    // 修改头像
     @PostMapping("/change-avatar")
     public Map<String, Object> changeAvatar(
-            @RequestParam Integer userId,
+            HttpServletRequest request,
             @RequestParam MultipartFile avatar) {
         Map<String, Object> result = new HashMap<>();
+        Integer userId = getUserIdFromRequest(request);
+
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
 
         if (avatar == null || avatar.isEmpty()) {
             result.put("code", 400);
@@ -132,9 +197,18 @@ public class UserController {
         return result;
     }
 
+    // 获取当前用户信息 - 从token获取
     @GetMapping("/current")
-    public Map<String, Object> getCurrentUser(@RequestParam Integer userId) {
+    public Map<String, Object> getCurrentUser(HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
+        Integer userId = getUserIdFromRequest(request);
+
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "未登录");
+            return result;
+        }
+
         User user = userMapper.findById(userId);
         if (user != null) {
             result.put("code", 200);
@@ -151,12 +225,21 @@ public class UserController {
         return result;
     }
 
+    // 修改用户名
     @PostMapping("/update-username")
     public Map<String, Object> changeUsername(
-            @RequestParam Integer userId,
+            HttpServletRequest request,
             @RequestParam String newUsername) {
-        System.out.println("收到修改用户名请求 - userId: " + userId + ", newUsername: " + newUsername);
+        System.out.println("收到修改用户名请求 - newUsername: " + newUsername);
         Map<String, Object> result = new HashMap<>();
+        Integer userId = getUserIdFromRequest(request);
+
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
+
         String msg = userService.changeUsername(userId, newUsername);
 
         if (msg.equals("用户名修改成功")) {
@@ -167,6 +250,16 @@ public class UserController {
             result.put("code", 400);
             result.put("msg", msg);
         }
+        return result;
+    }
+
+    // 登出接口
+    @PostMapping("/logout")
+    public Map<String, Object> logout() {
+        Map<String, Object> result = new HashMap<>();
+        // JWT是无状态的，前端删除token即可，后端不需要做任何操作
+        result.put("code", 200);
+        result.put("msg", "登出成功");
         return result;
     }
 }

@@ -9,6 +9,7 @@ import com.example.novelbackend.service.RecommendationService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.context.annotation.Lazy;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,10 @@ public class NovelController {
     @Resource
     @Lazy
     private RecommendationService recommendationService;
+
+    private Integer getUserIdFromRequest(HttpServletRequest request) {
+        return (Integer) request.getAttribute("userId");
+    }
 
     // 获取所有小说（书城用）
     @GetMapping("/list")
@@ -135,13 +140,18 @@ public class NovelController {
 
     // 添加到书架
     @PostMapping("/bookshelf/add")
-    public Map<String, Object> addToBookshelf(@RequestBody Map<String, Integer> params) {
+    public Map<String, Object> addToBookshelf(HttpServletRequest request, @RequestBody Map<String, Integer> params) {
         Map<String, Object> result = new HashMap<>();
 
-        Integer userId = params.get("userId");
-        Integer novelIdInt = params.get("novelId");
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
 
-        if (userId == null || novelIdInt == null) {
+        Integer novelIdInt = params.get("novelId");
+        if (novelIdInt == null) {
             result.put("code", 400);
             result.put("msg", "参数错误");
             return result;
@@ -164,9 +174,9 @@ public class NovelController {
     // 获取章节内容（包含导航信息）- 带阅读进度更新
     @GetMapping("/chapter/detail")
     public Map<String, Object> getChapterDetail(
+            HttpServletRequest request,
             @RequestParam Long novelId,
-            @RequestParam Integer chapterNum,
-            @RequestParam(required = false) Integer userId) {  // 添加 userId 参数
+            @RequestParam Integer chapterNum) {
         Map<String, Object> result = new HashMap<>();
 
         // 获取当前章节
@@ -221,18 +231,11 @@ public class NovelController {
         }
 
         // 如果用户已登录，更新阅读进度
+        Integer userId = getUserIdFromRequest(request);
         if (userId != null) {
             bookshelfService.updateReadProgress(userId, novelId, chapterNum);
-            // 👇 添加日志
-            System.out.println("===== 准备记录阅读行为 =====");
-            System.out.println("userId: " + userId);
-            System.out.println("novelId: " + novelId);
-            System.out.println("behaviorType: read_chapter");
-
-            // 记录阅读行为
             try {
                 recommendationService.recordUserBehavior(userId, novelId, "read_chapter");
-                System.out.println("===== 记录阅读行为成功 =====");
             } catch (Exception e) {
                 System.err.println("记录阅读行为失败: " + e.getMessage());
             }

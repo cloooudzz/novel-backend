@@ -2,6 +2,7 @@ package com.example.novelbackend.controller;
 
 import com.example.novelbackend.entity.Novel;
 import com.example.novelbackend.service.RecommendationService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import jakarta.annotation.Resource;
 import java.util.HashMap;
@@ -16,18 +17,22 @@ public class RecommendationController {
     @Resource
     private RecommendationService recommendationService;
 
+    private Integer getUserIdFromRequest(HttpServletRequest request) {
+        return (Integer) request.getAttribute("userId");
+    }
+
     // 获取个性化推荐
     @GetMapping("/personal")
     public Map<String, Object> getPersonalizedRecommendations(
-            @RequestParam(required = false) Integer userId,
+            HttpServletRequest request,
             @RequestParam(defaultValue = "10") int limit) {
         Map<String, Object> result = new HashMap<>();
 
+        Integer userId = getUserIdFromRequest(request);
         List<Novel> novels;
         if (userId != null) {
             novels = recommendationService.getPersonalizedRecommendations(userId, limit);
         } else {
-            // 未登录用户返回热门推荐
             novels = recommendationService.getPersonalizedRecommendations(null, limit);
         }
 
@@ -38,8 +43,16 @@ public class RecommendationController {
 
     // 获取用户标签偏好
     @GetMapping("/preferences")
-    public Map<String, Object> getUserPreferences(@RequestParam Integer userId) {
+    public Map<String, Object> getUserPreferences(HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
+        Integer userId = getUserIdFromRequest(request);
+
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
+
         result.put("code", 200);
         result.put("data", recommendationService.getUserTagPreferences(userId));
         return result;
@@ -56,14 +69,20 @@ public class RecommendationController {
 
     // 记录用户行为（前端调用）
     @PostMapping("/behavior")
-    public Map<String, Object> recordBehavior(@RequestBody Map<String, Object> params) {
+    public Map<String, Object> recordBehavior(HttpServletRequest request, @RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
 
-        Integer userId = (Integer) params.get("userId");
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
+
         Long novelId = ((Number) params.get("novelId")).longValue();
         String behaviorType = (String) params.get("behaviorType");
 
-        if (userId != null && novelId != null && behaviorType != null) {
+        if (novelId != null && behaviorType != null) {
             recommendationService.recordUserBehavior(userId, novelId, behaviorType);
         }
 

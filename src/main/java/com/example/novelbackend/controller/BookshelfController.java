@@ -1,6 +1,7 @@
 package com.example.novelbackend.controller;
 
 import com.example.novelbackend.service.BookshelfService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import jakarta.annotation.Resource;
 import java.util.HashMap;
@@ -15,15 +16,25 @@ public class BookshelfController {
     @Resource
     private BookshelfService bookshelfService;
 
+    private Integer getUserIdFromRequest(HttpServletRequest request) {
+        return (Integer) request.getAttribute("userId");
+    }
+
     // 添加到书架
     @PostMapping("/add")
-    public Map<String, Object> addToBookshelf(@RequestBody Map<String, Object> params) {
+    public Map<String, Object> addToBookshelf(HttpServletRequest request, @RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
 
-        Integer userId = (Integer) params.get("userId");
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
+
         Long novelId = ((Number) params.get("novelId")).longValue();
 
-        if (userId == null || novelId == null) {
+        if (novelId == null) {
             result.put("code", 400);
             result.put("msg", "参数错误");
             return result;
@@ -44,10 +55,15 @@ public class BookshelfController {
 
     // 从书架移除
     @DeleteMapping("/remove")
-    public Map<String, Object> removeFromBookshelf(
-            @RequestParam Integer userId,
-            @RequestParam Long novelId) {
+    public Map<String, Object> removeFromBookshelf(HttpServletRequest request, @RequestParam Long novelId) {
         Map<String, Object> result = new HashMap<>();
+
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
 
         Map<String, Object> serviceResult = bookshelfService.removeFromBookshelf(userId, novelId);
 
@@ -64,8 +80,15 @@ public class BookshelfController {
 
     // 获取用户书架列表
     @GetMapping("/list")
-    public Map<String, Object> getUserBookshelf(@RequestParam Integer userId) {
+    public Map<String, Object> getUserBookshelf(HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
+
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
 
         List<Map<String, Object>> list = bookshelfService.getUserBookshelf(userId);
 
@@ -78,10 +101,15 @@ public class BookshelfController {
 
     // 检查是否在书架中
     @GetMapping("/check")
-    public Map<String, Object> checkInBookshelf(
-            @RequestParam Integer userId,
-            @RequestParam Long novelId) {
+    public Map<String, Object> checkInBookshelf(HttpServletRequest request, @RequestParam Long novelId) {
         Map<String, Object> result = new HashMap<>();
+
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
 
         boolean inBookshelf = bookshelfService.isInBookshelf(userId, novelId);
 
@@ -93,14 +121,20 @@ public class BookshelfController {
 
     // 更新阅读进度
     @PostMapping("/progress")
-    public Map<String, Object> updateReadProgress(@RequestBody Map<String, Object> params) {
+    public Map<String, Object> updateReadProgress(HttpServletRequest request, @RequestBody Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
 
-        Integer userId = (Integer) params.get("userId");
+        Integer userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            result.put("code", 401);
+            result.put("msg", "请先登录");
+            return result;
+        }
+
         Long novelId = ((Number) params.get("novelId")).longValue();
         Integer chapterNum = (Integer) params.get("chapterNum");
 
-        if (userId == null || novelId == null || chapterNum == null) {
+        if (novelId == null || chapterNum == null) {
             result.put("code", 400);
             result.put("msg", "参数错误");
             return result;
@@ -113,6 +147,4 @@ public class BookshelfController {
 
         return result;
     }
-
-
 }
